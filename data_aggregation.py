@@ -23,6 +23,7 @@ class MyLayer:
             self.aggregate_data(subcategory=subcategory)
             self.export_data(year)
             self.prefecture = default_prefecture.copy()
+            self.prefecture.to_crs("EPSG:3857", inplace=True)
             self.data_group = {}
 
     def read_prefecture(self):
@@ -209,6 +210,7 @@ class MyLayer:
             + "/Aggregated_prefecture/geojson/"
             + f"Aggregated_Prefecture_{year}.geojson"
         )
+        self.prefecture.to_crs("EPSG:4326", inplace=True)
         self.prefecture.to_file(output_file, driver="GeoJSON")
         # export csv
         self.prefecture["geometry_wkt"] = self.prefecture["geometry"].apply(lambda geom: geom.wkt)
