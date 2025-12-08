@@ -136,8 +136,8 @@ class MyLayer:
             .rename(line_name)
             .reset_index()
         )
-        self.prefecture[line_name] = length_sum[line_name]
-        self.prefecture[line_name] = self.prefecture[line_name].fillna(0)
+        length_map = length_sum.set_index("OBJECTID")[line_name]
+        self.prefecture[line_name] = self.prefecture["OBJECTID"].map(length_map).fillna(0)
 
         # Subtotal length of lines within each prefecture by category
         if subcategory:
@@ -166,12 +166,12 @@ class MyLayer:
         """
         # Total area of polygons within each prefecture
         polygons["area"] = polygons.geometry.area
-        joined = gpd.sjoin(polygons, self.prefecture, how="left", predicate="within")
+        joined = gpd.overlay(polygons, self.prefecture, how="intersection")
         area_sum = (
             joined.groupby("OBJECTID")["area"].sum().rename(polygon_name).reset_index()
         )
-        self.prefecture[polygon_name] = area_sum[polygon_name]
-        self.prefecture[polygon_name] = self.prefecture[polygon_name].fillna(0)
+        area_map = area_sum.set_index("OBJECTID")[polygon_name]
+        self.prefecture[polygon_name] = self.prefecture["OBJECTID"].map(area_map).fillna(0)
 
         # Subtotal area of polygons within each prefecture by category
         if subcategory:
@@ -224,7 +224,7 @@ class MyLayer:
 if __name__ == "__main__":
     years = [2018, 2019, 2020]
     central_african_republic = MyLayer(
-        data_dir="data",
+        data_dir="mydata",
         prefecture_file="caf_admbnda_adm1_200k_sigcaf_reach_itos_Ocha.shp",
         years=years,
     )
