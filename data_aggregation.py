@@ -4,12 +4,13 @@ from typing import List
 
 
 class MyLayer:
-    def __init__(self, data_dir: str, prefecture_file: str, years: List):
+    def __init__(self, data_dir: str, prefecture_file: str, years: List, crs: str):
         self.data_dir = data_dir
         self.prefecture_file = prefecture_file
         self.years = years
         self.prefecture = None
         self.data_group = {}
+        self.crs = crs
 
     def run_workflow(self, subcategory=False):
         """
@@ -23,12 +24,12 @@ class MyLayer:
             self.aggregate_data(subcategory=subcategory)
             self.export_data(year)
             self.prefecture = default_prefecture.copy()
-            self.prefecture.to_crs("EPSG:3857", inplace=True)
+            self.prefecture.to_crs(self.crs, inplace=True)
             self.data_group = {}
 
     def read_prefecture(self):
         """
-        Read the prefecture shapefile and set its CRS to EPSG:3857.
+        Read the prefecture shapefile and set its CRS to ESRI:102022.
         :return:
         """
         self.prefecture = gpd.read_file(
@@ -47,7 +48,9 @@ class MyLayer:
         self.prefecture.rename(
             columns={"admin0Name": "country", "admin1Name": "prefecture"}, inplace=True
         )
-        self.prefecture.to_crs("EPSG:3857", inplace=True)
+        self.prefecture.to_crs(self.crs, inplace=True)
+        self.prefecture['Shape_Area'] = self.prefecture.geometry.area
+        self.prefecture['Shape_Leng'] = self.prefecture.geometry.length
 
     def read_shp(self, year):
         """
@@ -59,7 +62,7 @@ class MyLayer:
             if shp_file.endswith(".shp"):
                 data_name = shp_file.split("_")[2]
                 gdf = gpd.read_file(os.path.join(data_dir, shp_file))
-                gdf.to_crs("EPSG:3857", inplace=True)
+                gdf.to_crs(self.crs, inplace=True)
                 self.data_group[data_name] = gdf
 
     def aggregate_data(self, subcategory=False):
@@ -150,7 +153,7 @@ class MyLayer:
             for _, row in sublengths.iterrows():
                 col_name = f"{row['fclass']}_{line_name}"
                 if col_name not in self.prefecture.columns:
-                    self.prefecture[col_name] = 0
+                    self.prefecture[col_name] = 0.0
                 self.prefecture.loc[
                     self.prefecture["OBJECTID"] == row["OBJECTID"], col_name
                 ] = row[line_name]
@@ -184,7 +187,7 @@ class MyLayer:
             for _, row in subareas.iterrows():
                 col_name = f"{row['fclass']}_{polygon_name}"
                 if col_name not in self.prefecture.columns:
-                    self.prefecture[col_name] = 0
+                    self.prefecture[col_name] = 0.0
                 self.prefecture.loc[
                     self.prefecture["OBJECTID"] == row["OBJECTID"], col_name
                 ] = row[polygon_name]
@@ -224,8 +227,9 @@ class MyLayer:
 if __name__ == "__main__":
     years = [2018, 2019, 2020]
     central_african_republic = MyLayer(
-        data_dir="mydata",
+        data_dir="data",
         prefecture_file="caf_admbnda_adm1_200k_sigcaf_reach_itos_Ocha.shp",
         years=years,
+        crs="ESRI:102022"
     )
     central_african_republic.run_workflow(subcategory=True)
